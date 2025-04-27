@@ -1063,10 +1063,12 @@ namespace Glamaholic.Ui {
         }
 
         private void HandleTimers() {
-            var keys = this._timedMessages.Keys.ToArray();
-            foreach (var key in keys) {
-                if (this._timedMessages[key].Elapsed > TimeSpan.FromSeconds(5)) {
-                    this._timedMessages.Remove(key);
+            if (this._timedMessages.Count > 0) {
+                var keys = this._timedMessages.Keys.ToArray();
+                foreach (var key in keys) {
+                    if (this._timedMessages[key].Elapsed > TimeSpan.FromSeconds(5)) {
+                        this._timedMessages.Remove(key);
+                    }
                 }
             }
         }
