@@ -1147,7 +1147,7 @@ namespace Glamaholic.Ui {
                 } else {
                     sb.Append(kvp.Key.ToString()).Append(": ");
 
-                    if (DataCache.EquippableItems.Value.TryGetFirst(i => i.RowId == kvp.Value.ItemId, out Item item)) {
+                    if (!DataCache.EquippableItems.Value.TryGetFirst(i => i.RowId == kvp.Value.ItemId, out Item item)) {
                         sb.AppendLine("Unknown Item");
                     } else {
                         sb.Append(item.Name);
@@ -1160,7 +1160,7 @@ namespace Glamaholic.Ui {
 
                         sb.Append(" (");
                         if (kvp.Value.Stain1 != 0) {
-                            if (stainSheet.TryGetRow(kvp.Value.Stain1, out var stain)) {
+                            if (!stainSheet.TryGetRow(kvp.Value.Stain1, out var stain)) {
                                 sb.Append("Unknown Stain");
                             } else {
                                 sb.Append(stain.Name);
@@ -1172,7 +1172,7 @@ namespace Glamaholic.Ui {
                             if (kvp.Value.Stain1 != 0)
                                 sb.Append(", ");
 
-                            if (stainSheet.TryGetRow(kvp.Value.Stain2, out var stain)) {
+                            if (!stainSheet.TryGetRow(kvp.Value.Stain2, out var stain)) {
                                 sb.Append("Unknown Stain");
                             } else {
                                 sb.Append(stain.Name);
