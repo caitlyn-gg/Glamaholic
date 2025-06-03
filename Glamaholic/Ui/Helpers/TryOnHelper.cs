@@ -4,6 +4,7 @@ using ImGuiNET;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 
 namespace Glamaholic.Ui.Helpers {
     internal class TryOnHelper {
@@ -43,6 +44,27 @@ namespace Glamaholic.Ui.Helpers {
             if (HelperUtil.DrawCreatePlateMenu(this.Ui, GetTryOnItems, ref this._nameInput)) {
                 this._nameInput = PlateName;
             }
+
+            if (Interop.Glamourer.IsAvailable()) {
+                if (ImGui.Selectable("Try on Glamourer")) {
+                    this.TryOnGlamourer(false);
+                }
+
+                if (ImGui.Selectable("Try on Glamourer - New Emperor")) {
+                    this.TryOnGlamourer(true);
+                }
+            }
+        }
+
+        private void TryOnGlamourer(bool withEmperor) {
+            if (Service.ClientState.LocalPlayer == null) return;
+            var plate = new SavedPlate("Glamourer") {
+                Items = GetTryOnItems(),
+                FillWithNewEmperor = withEmperor
+            };
+
+            Configuration.SanitisePlate(plate);
+            Interop.Glamourer.TryOn(Service.ClientState.LocalPlayer.ObjectIndex, plate);
         }
 
         private static unsafe Dictionary<PlateSlot, SavedGlamourItem> GetTryOnItems() {
