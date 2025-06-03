@@ -1109,7 +1109,7 @@ namespace Glamaholic.Ui {
                 items = DataCache.EquippableItems.Value;
             }
 
-            this.FilteredItems = DataCache.EquippableItems.Value
+            this.FilteredItems = items
                 .Where(item => !Util.IsItemSkipped(item))
                 .Where(item => Util.MatchesSlot(item.EquipSlotCategory.Value!, slot))
                 .Where(item => this._itemFilter.Length == 0 || item.Name.ExtractText().ToLowerInvariant().Contains(filter))
