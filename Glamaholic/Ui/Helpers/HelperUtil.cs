@@ -86,6 +86,59 @@ namespace Glamaholic.Ui.Helpers {
             ImGui.End();
         }
 
+        internal static Guid? DrawFolderMenuItems(List<TreeNode> rootNodes) {
+            var folders = TreeUtils.GetAllFolders(rootNodes);
+
+            if (ImGui.MenuItem("Root (No Folder)"))
+                return Guid.Empty;
+
+            if (folders.Count > 0)
+                ImGui.Separator();
+
+            foreach (var (id, path) in folders) {
+                if (ImGui.MenuItem(path))
+                    return id;
+            }
+
+            if (folders.Count == 0) {
+                ImGui.Separator();
+                ImGui.TextDisabled("No folders created yet.");
+            }
+
+            return null;
+        }
+
+        internal static Guid? DrawFolderCombo(List<TreeNode> rootNodes, Guid? currentSelection, string comboId = "##folder-select") {
+            Guid? result = null;
+            var folders = TreeUtils.GetAllFolders(rootNodes);
+
+            var preview = "Root (No Folder)";
+            if (currentSelection.HasValue && currentSelection.Value != Guid.Empty) {
+                foreach (var (id, path) in folders) {
+                    if (id == currentSelection.Value) {
+                        preview = path;
+                        break;
+                    }
+                }
+            }
+
+            if (ImGui.BeginCombo(comboId, preview)) {
+                if (ImGui.Selectable("Root (No Folder)", !currentSelection.HasValue || currentSelection.Value == Guid.Empty))
+                    result = Guid.Empty;
+
+                foreach (var (id, path) in folders) {
+                    if (ImGui.Selectable(path, currentSelection.HasValue && currentSelection.Value == id))
+                        result = id;
+                }
+
+                ImGui.EndCombo();
+            }
+
+            return result;
+        }
+
+        private static Guid? _createPlateTargetFolder = null;
+
         internal static bool DrawCreatePlateMenu(PluginUi ui, Func<Dictionary<PlateSlot, SavedGlamourItem>?> getter, ref string nameInput) {
             var ret = false;
 
@@ -98,10 +151,18 @@ namespace Glamaholic.Ui.Helpers {
             if (Util.DrawTextInput("current-name", ref nameInput, message: msg, flags: ImGuiInputTextFlags.AutoSelectAll)) {
                 var items = getter();
                 if (items != null) {
-                    CopyToGlamourPlate(ui, nameInput, items, null);
+                    var folderId = (_createPlateTargetFolder.HasValue && _createPlateTargetFolder.Value != Guid.Empty)
+                        ? _createPlateTargetFolder : null;
+                    CopyToGlamourPlate(ui, nameInput, items, null, folderId);
                     ret = true;
                 }
             }
+
+            ImGui.TextUnformatted("Folder:");
+            ImGui.SetNextItemWidth(-1);
+            var folderChoice = DrawFolderCombo(ui.Plugin.Config.Plates, _createPlateTargetFolder, "##create-plate-folder");
+            if (folderChoice.HasValue)
+                _createPlateTargetFolder = folderChoice.Value;
 
             ImGui.PopTextWrapPos();
 
@@ -149,7 +210,7 @@ namespace Glamaholic.Ui.Helpers {
             return ret;
         }
 
-        private static void CopyToGlamourPlate(PluginUi ui, string name, Dictionary<PlateSlot, SavedGlamourItem> items, Guid? plateId) {
+        private static void CopyToGlamourPlate(PluginUi ui, string name, Dictionary<PlateSlot, SavedGlamourItem> items, Guid? plateId, Guid? targetFolderId = null) {
             var plate = new SavedPlate(name) {
                 Items = items,
             };
@@ -157,7 +218,7 @@ namespace Glamaholic.Ui.Helpers {
             Configuration.SanitisePlate(plate);
 
             if (plateId == null) {
-                var id = ui.Plugin.Config.AddPlate(plate);
+                var id = ui.Plugin.Config.AddPlate(plate, targetFolderId);
                 ui.Plugin.SaveConfig();
                 ui.OpenMainInterface();
                 var allPlates = TreeUtils.GetAllPlates(ui.Plugin.Config.Plates);

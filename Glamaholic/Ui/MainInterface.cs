@@ -76,6 +76,7 @@ namespace Glamaholic.Ui {
         private string _folderRenameInput = string.Empty;
 
         private Guid? _dragGuid = null;
+        private Guid? _newPlateTargetFolder = null;
 
         // Changelog state
         private bool _showChangelog = false;
@@ -145,18 +146,34 @@ namespace Glamaholic.Ui {
                     this.SwitchPlate(id, true);
                 }
 
-                if (ImGui.MenuItem("Import from Clipboard")) {
-                    var json = Util.GetClipboardText();
+                if (ImGui.BeginMenu("Import from Clipboard")) {
+                    SharedPlate? clipPlate = null;
                     try {
-                        var plate = JsonConvert.DeserializeObject<SharedPlate>(json);
-                        if (plate != null) {
-                            var id = this.Ui.Plugin.Config.AddPlate(plate.ToPlate());
+                        clipPlate = JsonConvert.DeserializeObject<SharedPlate>(Util.GetClipboardText());
+                    } catch {
+                        // ignored
+                    }
+
+                    if (clipPlate == null) {
+                        ImGui.TextDisabled("No valid plate data in clipboard.");
+                    } else {
+                        if (ImGui.MenuItem("To Root")) {
+                            var id = this.Ui.Plugin.Config.AddPlate(clipPlate.ToPlate());
                             this.Ui.Plugin.SaveConfig();
                             this.Ui.SwitchPlate(id);
                         }
-                    } catch (Exception ex) {
-                        Service.Log.Warning(ex, "Failed to import glamour plate");
+
+                        var folders = TreeUtils.GetAllFolders(this.Ui.Plugin.Config.Plates);
+                        foreach (var (folderId, path) in folders) {
+                            if (ImGui.MenuItem($"To {path}")) {
+                                var id = this.Ui.Plugin.Config.AddPlate(clipPlate.ToPlate(), folderId);
+                                this.Ui.Plugin.SaveConfig();
+                                this.Ui.SwitchPlate(id);
+                            }
+                        }
                     }
+
+                    ImGui.EndMenu();
                 }
 
                 ImGui.EndMenu();
@@ -165,8 +182,18 @@ namespace Glamaholic.Ui {
             if (ImGui.BeginMenu("Eorzea Collection")) {
                 var validUrl = IsValidEorzeaCollectionUrl(Util.GetClipboardText());
                 if (ImGui.BeginMenu("Import from URL", validUrl && !this._ecImporting)) {
-                    if (ImGui.MenuItem("New Plate"))
-                        this.ImportEorzeaCollection(Util.GetClipboardText(), ECImportTarget.NewPlate);
+                    if (ImGui.BeginMenu("New Plate")) {
+                        if (ImGui.MenuItem("To Root"))
+                            this.ImportEorzeaCollection(Util.GetClipboardText(), ECImportTarget.NewPlate);
+
+                        var folders = TreeUtils.GetAllFolders(this.Ui.Plugin.Config.Plates);
+                        foreach (var (folderId, path) in folders) {
+                            if (ImGui.MenuItem($"To {path}"))
+                                this.ImportEorzeaCollection(Util.GetClipboardText(), ECImportTarget.NewPlate, folderId);
+                        }
+
+                        ImGui.EndMenu();
+                    }
 
                     if (ImGui.MenuItem("Try On"))
                         this.ImportEorzeaCollection(Util.GetClipboardText(), ECImportTarget.TryOn);
@@ -256,7 +283,7 @@ namespace Glamaholic.Ui {
             TryOnGlamourer,
         }
 
-        private void ImportEorzeaCollection(string url, ECImportTarget target) {
+        private void ImportEorzeaCollection(string url, ECImportTarget target, Guid? targetFolderId = null) {
             if (!IsValidEorzeaCollectionUrl(url) || Service.ObjectTable.LocalPlayer == null) {
                 return;
             }
@@ -283,7 +310,7 @@ namespace Glamaholic.Ui {
                 switch (target) {
                     case ECImportTarget.NewPlate:
                         import.Tags.Add("Eorzea Collection");
-                        var id = this.Ui.Plugin.Config.AddPlate(import);
+                        var id = this.Ui.Plugin.Config.AddPlate(import, targetFolderId);
                         this.Ui.Plugin.SaveConfig();
                         this.SwitchPlate(id, true);
                         break;
@@ -378,6 +405,19 @@ namespace Glamaholic.Ui {
 
                             // Right-click context menu for plate node
                             if (ImGui.BeginPopupContextItem($"plate-node-context-{node.Id}")) {
+                                if (ImGui.BeginMenu("Move to Folder")) {
+                                    var selected = Helpers.HelperUtil.DrawFolderMenuItems(this.Ui.Plugin.Config.Plates);
+                                    if (selected.HasValue) {
+                                        TreeUtils.MoveNodeToFolder(this.Ui.Plugin.Config.Plates, node.Id,
+                                            selected.Value == Guid.Empty ? null : selected.Value);
+                                        this.Ui.Plugin.SaveConfig();
+                                        ImGui.CloseCurrentPopup();
+                                    }
+                                    ImGui.EndMenu();
+                                }
+
+                                ImGui.Separator();
+
                                 if (ImGui.MenuItem("Delete")) {
                                     _contextMenuNodeId = node.Id;
                                     _confirmDeleteNode = true;
@@ -641,6 +681,12 @@ namespace Glamaholic.Ui {
             }
 
             ImGui.SameLine();
+            if (Util.IconButton(FontAwesomeIcon.CaretDown, tooltip: "New Plate in Folder")) {
+                ImGui.OpenPopup("new-plate-folder-popup");
+                _newPlateTargetFolder = null;
+            }
+
+            ImGui.SameLine();
             if (Util.IconButton(FontAwesomeIcon.FolderPlus, tooltip: "New Folder")) {
                 ImGui.OpenPopup("new-folder-popup");
                 _newFolderNameInput = string.Empty;
@@ -679,6 +725,32 @@ namespace Glamaholic.Ui {
                         Children = new List<TreeNode>()
                     });
                     this.Ui.Plugin.SaveConfig();
+                    ImGui.CloseCurrentPopup();
+                }
+
+                ImGui.SameLine();
+
+                if (ImGui.Button("Cancel")) {
+                    ImGui.CloseCurrentPopup();
+                }
+
+                ImGui.EndPopup();
+            }
+
+            if (ImGui.BeginPopup("new-plate-folder-popup")) {
+                ImGui.TextUnformatted("Folder:");
+                ImGui.SetNextItemWidth(200);
+                var folderChoice = Helpers.HelperUtil.DrawFolderCombo(
+                    this.Ui.Plugin.Config.Plates, _newPlateTargetFolder, "##new-plate-folder");
+                if (folderChoice.HasValue)
+                    _newPlateTargetFolder = folderChoice.Value;
+
+                if (ImGui.Button("Create")) {
+                    Guid? target = (_newPlateTargetFolder.HasValue && _newPlateTargetFolder.Value != Guid.Empty)
+                        ? _newPlateTargetFolder : null;
+                    var id = this.Ui.Plugin.Config.AddPlate(new SavedPlate("Untitled Plate"), target);
+                    this.Ui.Plugin.SaveConfig();
+                    this.SwitchPlate(id, true);
                     ImGui.CloseCurrentPopup();
                 }
 
@@ -1033,7 +1105,7 @@ namespace Glamaholic.Ui {
 
         private void DrawPlateButtons(PlateNode node) {
             var plate = node.Plate!;
-            if (this._editing || !ImGui.BeginTable("plate buttons", 6, ImGuiTableFlags.SizingFixedFit)) {
+            if (this._editing || !ImGui.BeginTable("plate buttons", 7, ImGuiTableFlags.SizingFixedFit)) {
                 return;
             }
 
@@ -1074,6 +1146,22 @@ namespace Glamaholic.Ui {
             if (Util.IconButton(FontAwesomeIcon.FileExport, tooltip: "Export as Text")) {
                 ImGui.SetClipboardText(ConvertToText(plate));
                 this.AddTimedMessage("Copied to clipboard.");
+            }
+
+            ImGui.TableNextColumn();
+            if (Util.IconButton(FontAwesomeIcon.FolderOpen, tooltip: "Move to Folder")) {
+                ImGui.OpenPopup("move-to-folder-popup");
+            }
+
+            if (ImGui.BeginPopup("move-to-folder-popup")) {
+                var selected = Helpers.HelperUtil.DrawFolderMenuItems(this.Ui.Plugin.Config.Plates);
+                if (selected.HasValue) {
+                    TreeUtils.MoveNodeToFolder(this.Ui.Plugin.Config.Plates, node.Id,
+                        selected.Value == Guid.Empty ? null : selected.Value);
+                    this.Ui.Plugin.SaveConfig();
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.EndPopup();
             }
 
             ImGui.EndTable();
