@@ -1281,7 +1281,7 @@ namespace Glamaholic.Ui {
 
                 foreach (var (dye, count) in dyes.OrderBy(kvp => kvp.Key)) {
                     if (Service.DataManager.GetExcelSheet<Stain>()!.TryGetRow(dye, out var stain)) {
-                        string line = $"{count}x {stain.Name}";
+                        string line = $"{count}x {stain.Name} Dye";
                         ImGui.TextUnformatted(line);
 
                         if (copyDyes)
