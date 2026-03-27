@@ -114,13 +114,22 @@ namespace Glamaholic {
             }
         }
 
-        internal Guid AddPlate(SavedPlate plate) {
+        internal Guid AddPlate(SavedPlate plate, Guid? targetFolderId = null) {
             SanitisePlate(plate);
-            // Add as a leaf node at root (after all folders)
             var node = new PlateNode(plate);
+
+            if (targetFolderId != null) {
+                var folder = TreeUtils.FindNodeById(this.Plates, targetFolderId.Value) as FolderNode;
+                if (folder != null) {
+                    folder.Children.Add(node);
+                    TreeUtils.EnsureFoldersFirst(folder.Children);
+                    return node.Id;
+                }
+            }
+
+            // Add as a leaf node at root (after all folders)
             this.Plates.Add(node);
             TreeUtils.EnsureFoldersFirst(this.Plates);
-
             return node.Id;
         }
 

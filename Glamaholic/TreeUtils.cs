@@ -235,6 +235,22 @@ internal class TreeUtils
         }
     }
 
+    public static List<(Guid id, string path)> GetAllFolders(List<TreeNode> rootNodes) {
+        var folders = new List<(Guid, string)>();
+        CollectFolders(rootNodes, "", folders);
+        return folders;
+    }
+
+    private static void CollectFolders(List<TreeNode> nodes, string parentPath, List<(Guid, string)> folders) {
+        foreach (var node in nodes) {
+            if (node is FolderNode folder) {
+                var path = string.IsNullOrEmpty(parentPath) ? folder.Name : $"{parentPath}/{folder.Name}";
+                folders.Add((node.Id, path));
+                CollectFolders(folder.Children, path, folders);
+            }
+        }
+    }
+
     public static bool ReplacePlate(List<TreeNode> rootNodes, Guid plateId, SavedPlate newPlate) {
         var (parent, index) = FindNodeParent(rootNodes, plateId);
         if (parent == null || index == -1 || parent[index] is not PlateNode)
