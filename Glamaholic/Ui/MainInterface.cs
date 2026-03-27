@@ -675,13 +675,6 @@ namespace Glamaholic.Ui {
 
             ImGui.PushItemWidth(-1);
             if (Util.IconButton(FontAwesomeIcon.Plus, tooltip: "New Plate")) {
-                var id = this.Ui.Plugin.Config.AddPlate(new SavedPlate("Untitled Plate"));
-                this.Ui.Plugin.SaveConfig();
-                this.SwitchPlate(id, true);
-            }
-
-            ImGui.SameLine();
-            if (Util.IconButton(FontAwesomeIcon.CaretDown, tooltip: "New Plate in Folder")) {
                 ImGui.OpenPopup("new-plate-folder-popup");
                 _newPlateTargetFolder = null;
             }

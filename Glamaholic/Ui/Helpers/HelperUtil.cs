@@ -145,8 +145,13 @@ namespace Glamaholic.Ui.Helpers {
             if (!ImGui.BeginMenu("Create glamour plate")) {
                 return ret;
             }
+            
+            ImGui.SetNextItemWidth(-1);
+            var folderChoice = DrawFolderCombo(ui.Plugin.Config.Plates, _createPlateTargetFolder, "##create-plate-folder");
+            if (folderChoice.HasValue)
+                _createPlateTargetFolder = folderChoice.Value;
 
-            const string msg = "Enter a name and press Enter to create a new plate, or choose a plate below to overwrite.";
+            const string msg = "Select a folder, enter a name and then press then <Enter> to create a new plate, or choose a plate below to overwrite.";
             ImGui.PushTextWrapPos(250);
             if (Util.DrawTextInput("current-name", ref nameInput, message: msg, flags: ImGuiInputTextFlags.AutoSelectAll)) {
                 var items = getter();
@@ -157,13 +162,6 @@ namespace Glamaholic.Ui.Helpers {
                     ret = true;
                 }
             }
-
-            ImGui.TextUnformatted("Folder:");
-            ImGui.SetNextItemWidth(-1);
-            var folderChoice = DrawFolderCombo(ui.Plugin.Config.Plates, _createPlateTargetFolder, "##create-plate-folder");
-            if (folderChoice.HasValue)
-                _createPlateTargetFolder = folderChoice.Value;
-
             ImGui.PopTextWrapPos();
 
             if (ImGui.IsWindowAppearing()) {
@@ -173,12 +171,13 @@ namespace Glamaholic.Ui.Helpers {
             ImGui.Separator();
 
             if (ImGui.BeginChild("helper-overwrite", new Vector2(250, 350))) {
-                void DrawPlateNodes(List<TreeNode> nodes) {
+                void DrawPlateNodes(List<TreeNode> nodes, int depth) {
                     foreach (var node in nodes) {
                         if (node is PlateNode leaf) {
                             var plate = leaf.Plate;
                             var ctrl = ImGui.GetIO().KeyCtrl;
-                            if (ImGui.Selectable($"{plate.Name}##{node.Id}") && ctrl) {
+                            string indent = new string(' ', depth * 4);
+                            if (ImGui.Selectable($"{indent}{plate.Name}##{node.Id}") && ctrl) {
                                 var items = getter();
                                 if (items != null) {
                                     CopyToGlamourPlate(ui, plate.Name, items, node.Id);
@@ -195,13 +194,13 @@ namespace Glamaholic.Ui.Helpers {
                             ImGui.TextUnformatted($"[Folder] {folder.Name}");
 
                             if (folder.Children.Count > 0) {
-                                DrawPlateNodes(folder.Children);
+                                DrawPlateNodes(folder.Children, depth + 1);
                             }
                         }
                     }
                 }
 
-                DrawPlateNodes(ui.Plugin.Config.Plates);
+                DrawPlateNodes(ui.Plugin.Config.Plates, 0);
                 ImGui.EndChild();
             }
 
