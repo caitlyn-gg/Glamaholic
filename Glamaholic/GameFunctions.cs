@@ -1,3 +1,4 @@
+using Dalamud.Game.Chat;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -8,11 +9,13 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel.Sheets;
 using Lumina.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using static FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentMiragePrismMiragePlateData;
+using Cabinet = FFXIVClientStructs.FFXIV.Client.Game.UI.Cabinet;
 
 namespace Glamaholic {
     internal unsafe class GameFunctions : IDisposable {
@@ -79,13 +82,13 @@ namespace Glamaholic {
             _setSelectedItemStainsHook.Original(self, item0, pendingStain0Id, pendingStain0ItemId, item1, pendingStain1Id, pendingStain1ItemId);
         }
         
-        private void OnChat(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (this._filterIds.Count == 0 || type != XivChatType.SystemMessage) {
+        private void OnChat(IHandleableChatMessage msg) {
+            if (this._filterIds.Count == 0 || msg.LogKind != XivChatType.SystemMessage) {
                 return;
             }
 
-            if (message.Payloads.Any(payload => payload is ItemPayload item && this._filterIds.Remove(item.ItemId))) {
-                isHandled = true;
+            if (msg.Message.Payloads.Any(payload => payload is ItemPayload item && this._filterIds.Remove(item.ItemId))) {
+                msg.PreventOriginal();
             }
         }
 
@@ -194,7 +197,7 @@ namespace Glamaholic {
                 return false;
             }
 
-            return this.Armoire->IsItemInCabinet((int) row.Value.RowId);
+            return this.Armoire->IsItemInCabinet(row.Value.RowId);
         }
 
         internal unsafe void LoadPlate(SavedPlate plate) {
@@ -326,7 +329,7 @@ namespace Glamaholic {
             }
 
             int cabinetId = GetCabinetItemId(Armoire, wantedItem.ItemId);
-            bool isInCabinet = cabinetId != -1 && Armoire->IsItemInCabinet(cabinetId);
+            bool isInCabinet = cabinetId != -1 && Armoire->IsItemInCabinet((uint) cabinetId);
             
             if (plateItem == null && prismBoxItem == null && !isInCabinet) {
                 Plugin.LogTroubleshooting($"Skipping {slot}: could not find item {wantedItem.ItemId} ({wantedItem.Stain1}, {wantedItem.Stain2})");
@@ -478,46 +481,42 @@ namespace Glamaholic {
         };
 
         private unsafe InventoryItem* SelectStainItem(byte stainId, Dictionary<(uint, uint), uint> usedStains, out uint bestItemId) {
-            var inventory = InventoryManager.Instance();
-            var transient = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.StainTransient>()!.GetRowOrDefault(stainId);
+            InventoryManager* inventory = InventoryManager.Instance();
+            Stain? stainRow = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Stain>()!.GetRowOrDefault(stainId);
+
+            var stainItems = stainRow!.Value.Item;
 
             InventoryItem* item = null;
 
-            bestItemId = transient?.Item1.ValueNullable?.RowId ?? (transient?.Item2.ValueNullable?.RowId ?? 0);
-
-            var items = new[] { transient?.Item1.ValueNullable, transient?.Item2.ValueNullable };
-            foreach (var dyeItem in items) {
-                if (dyeItem == null || dyeItem.Value.RowId == 0) {
+            bestItemId = stainItems[0].RowId;
+            
+            foreach (var stainItem in stainItems) {
+                if (stainItem.Value.RowId == 0)
                     continue;
-                }
 
                 foreach (var type in PlayerInventories) {
-                    var inv = inventory->GetInventoryContainer(type);
-                    if (inv == null) {
+                    InventoryContainer* inv = inventory->GetInventoryContainer(type);
+                    if (inv == null)
                         continue;
-                    }
 
-                    for (var i = 0; i < inv->Size; i++) {
-                        var address = ((uint) type, (uint) i);
-                        var invItem = inv->Items[i];
+                    for (int i = 0; i < inv->Size; i++) {
+                        (uint, uint) address = ((uint) type, (uint) i);
+                        InventoryItem invItem = inv->Items[i];
 
-                        if (invItem.ItemId != dyeItem.Value.RowId) {
+                        if (invItem.ItemId != stainItem.Value.RowId)
                             continue;
-                        }
 
-                        if (usedStains.TryGetValue(address, out var numUsed) && numUsed >= invItem.Quantity) {
+                        if (usedStains.TryGetValue(address, out var numUsed) && numUsed >= invItem.Quantity)
                             continue;
-                        }
 
                         // first one that we find in the inventory is the one we'll use
                         item = &inv->Items[i];
                         bestItemId = invItem.ItemId;
 
-                        if (usedStains.ContainsKey(address)) {
+                        if (usedStains.ContainsKey(address))
                             usedStains[address] += 1;
-                        } else {
+                        else
                             usedStains[address] = 1;
-                        }
 
                         goto NoBreakLabels;
                     }
