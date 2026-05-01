@@ -1,4 +1,4 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
@@ -16,6 +16,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Dalamud.Interface.Utility.Raii;
+using Lumina.Excel;
 
 namespace Glamaholic.Ui {
     internal class MainInterface {
@@ -1347,27 +1348,42 @@ namespace Glamaholic.Ui {
             copyDyes |= ImGui.IsItemClicked(ImGuiMouseButton.Left);
 
             if (showDyes) {
-                Dictionary<byte, int> dyes = [];
+                Dictionary<uint, (int, CachedStain)> stainItems = new();
+                
                 foreach (var (_, item) in plate.Items) {
-                    if (item.Stain1 != 0)
-                        dyes[item.Stain1] = (dyes.ContainsKey(item.Stain1) ? dyes[item.Stain1] : 0) + 1;
+                    if (item.Stain1 != 0) {
+                        if (!DataCache.Stains.Value.TryGetValue(item.Stain1, out var stain))
+                            continue;
 
-                    if (item.Stain2 != 0)
-                        dyes[item.Stain2] = (dyes.ContainsKey(item.Stain2) ? dyes[item.Stain2] : 0) + 1;
+                        if (stainItems.TryGetValue(stain.ItemIds[0], out var existing))
+                            stainItems[stain.ItemIds[0]] = (existing.Item1 + 1, existing.Item2);
+                        else
+                            stainItems[stain.ItemIds[0]] = (1, stain);
+                    }
+
+                    if (item.Stain2 != 0) {
+                        if (!DataCache.Stains.Value.TryGetValue(item.Stain2, out var stain))
+                            continue;
+                        
+                        if (stainItems.TryGetValue(stain.ItemIds[0], out var existing))
+                            stainItems[stain.ItemIds[0]] = (existing.Item1 + 1, existing.Item2);
+                        else
+                            stainItems[stain.ItemIds[0]] = (1, stain);
+                    }
                 }
 
                 StringBuilder export = new();
 
                 ImGui.BeginTooltip();
 
-                foreach (var (dye, count) in dyes.OrderBy(kvp => kvp.Key)) {
-                    if (Service.DataManager.GetExcelSheet<Stain>()!.TryGetRow(dye, out var stain)) {
-                        string line = $"{count}x {stain.Name} Dye";
-                        ImGui.TextUnformatted(line);
+                foreach (var (stain, track) in stainItems.OrderBy(kvp => -kvp.Value.Item1)) {
+                    string itemName = track.Item2.ItemName;
+                    
+                    string line = $"{track.Item1}x {itemName}";
+                    ImGui.TextUnformatted(line);
 
-                        if (copyDyes)
-                            export.AppendLine(line);
-                    }
+                    if (copyDyes)
+                        export.AppendLine(line);
                 }
 
                 if (copyDyes || DateTime.Now.Subtract(_dyesCopiedTime).TotalSeconds < 1.5) {

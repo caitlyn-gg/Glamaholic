@@ -19,7 +19,7 @@ namespace Glamaholic.Interop {
 
         public static async Task<SavedPlate?> ImportFromURL(string userFacingURL) {
             var items = DataCache.EquippableItems.Value;
-            var stains = DataCache.StainLookup.Value;
+            var stains = DataCache.StainsByName.Value;
 
             string? url = ConvertURLForAPI(userFacingURL);
             if (url == null) {
