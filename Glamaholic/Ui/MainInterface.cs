@@ -219,6 +219,7 @@ namespace Glamaholic.Ui {
                 anyChanged |= ImGui.MenuItem("Show plate editor menu", "", ref this.Ui.Plugin.Config.ShowEditorMenu);
                 anyChanged |= ImGui.MenuItem("Show examine window menu", "", ref this.Ui.Plugin.Config.ShowExamineMenu);
                 anyChanged |= ImGui.MenuItem("Show try on menu", "", ref this.Ui.Plugin.Config.ShowTryOnMenu);
+                anyChanged |= ImGui.MenuItem("Sync try on with selected plate", "", ref this.Ui.Plugin.Config.SyncTryOnWithSelection);
                 ImGui.Separator();
                 anyChanged |= ImGui.MenuItem("Show Ko-fi button", "", ref this.Ui.Plugin.Config.ShowKofiButton);
                 ImGui.Separator();
@@ -1099,9 +1100,15 @@ namespace Glamaholic.Ui {
 
         private void DrawPlateButtons(PlateNode node) {
             var plate = node.Plate!;
-            if (this._editing || !ImGui.BeginTable("plate buttons", 7, ImGuiTableFlags.SizingFixedFit)) {
+            if (this._editing || !ImGui.BeginTable("plate buttons", 10, ImGuiTableFlags.SizingFixedFit)) {
                 return;
             }
+
+            for (var i = 0; i < 7; i++)
+                ImGui.TableSetupColumn($"btn{i}");
+            ImGui.TableSetupColumn("spacer", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("prev");
+            ImGui.TableSetupColumn("next");
 
             ImGui.TableNextColumn();
             if (Util.IconButton(FontAwesomeIcon.Check, tooltip: "Apply")) {
@@ -1157,6 +1164,28 @@ namespace Glamaholic.Ui {
                 }
                 ImGui.EndPopup();
             }
+
+            // Spacer column pushes nav buttons to the right
+            ImGui.TableNextColumn();
+
+            var visiblePlates = this.GetVisiblePlates();
+            var currentIndex = visiblePlates.FindIndex(p => p.id == node.Id);
+
+            ImGui.TableNextColumn();
+            var hasPrev = currentIndex > 0;
+            if (!hasPrev) ImGui.BeginDisabled();
+            if (Util.IconButton(FontAwesomeIcon.ChevronLeft, tooltip: "Previous plate")) {
+                this.SwitchPlate(visiblePlates[currentIndex - 1].id, scrollTo: true);
+            }
+            if (!hasPrev) ImGui.EndDisabled();
+
+            ImGui.TableNextColumn();
+            var hasNext = currentIndex >= 0 && currentIndex < visiblePlates.Count - 1;
+            if (!hasNext) ImGui.BeginDisabled();
+            if (Util.IconButton(FontAwesomeIcon.ChevronRight, tooltip: "Next plate")) {
+                this.SwitchPlate(visiblePlates[currentIndex + 1].id, scrollTo: true);
+            }
+            if (!hasNext) ImGui.EndDisabled();
 
             ImGui.EndTable();
         }
@@ -1525,6 +1554,13 @@ namespace Glamaholic.Ui {
             this._timedMessages[message] = timer;
         }
 
+        private List<(Guid id, PlateNode plate)> GetVisiblePlates() {
+            var all = TreeUtils.GetAllPlates(this.Ui.Plugin.Config.Plates);
+            return this.PlateFilter is null
+                ? all
+                : all.Where(p => this.PlateFilter.Matches(p.plate.Plate)).ToList();
+        }
+
         internal void SwitchPlate(Guid plateId, bool scrollTo = false) {
             this._selectedPlateId = plateId;
             this._scrollToSelected = scrollTo;
@@ -1533,6 +1569,12 @@ namespace Glamaholic.Ui {
             this._deleteConfirm = false;
             this._timedMessages.Clear();
             this.ResetEditing();
+
+            if (this.Ui.Plugin.Config.SyncTryOnWithSelection && Util.IsTryingOn(Service.GameGui)) {
+                if (TreeUtils.FindNodeById(this.Ui.Plugin.Config.Plates, plateId) is PlateNode plateNode) {
+                    this.Ui.TryOnHelper.TryOnPlate(plateNode.Plate);
+                }
+            }
         }
 
         private void ResetEditing() {
