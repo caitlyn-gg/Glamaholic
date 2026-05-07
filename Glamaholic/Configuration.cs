@@ -98,6 +98,7 @@ namespace Glamaholic {
         public bool ShowTryOnMenu = true;
         public bool ShowKofiButton = true;
         public bool ItemFilterShowObtainedOnly;
+        public bool SyncTryOnWithSelection = true;
         public bool TroubleshootingMode = false;
 
         /// <summary>

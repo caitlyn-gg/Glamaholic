@@ -11,6 +11,7 @@ namespace Glamaholic {
         internal const string PlateAddon = "MiragePrismMiragePlate";
         private const string BoxAddon = "MiragePrismPrismBox";
         private const string ArmoireAddon = "CabinetWithdraw";
+        private const string TryOnAddon = "Tryon";
 
         internal const uint HqItemOffset = 1_000_000; // The XIV code uses 500,000 but I'll trust this
         internal const uint ItemModifierMod = 500_000;
@@ -30,6 +31,10 @@ namespace Glamaholic {
             var armoireOpen = IsOpen(gui, ArmoireAddon);
 
             return plateOpen && (boxOpen || armoireOpen);
+        }
+
+        internal static bool IsTryingOn(IGameGui gui) {
+            return IsOpen(gui, TryOnAddon);
         }
 
         internal static bool DrawTextInput(string id, ref string input, int max = 512, string message = "Press Enter to save.", ImGuiInputTextFlags flags = ImGuiInputTextFlags.None) {
