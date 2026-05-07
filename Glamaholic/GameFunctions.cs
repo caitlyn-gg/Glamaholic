@@ -228,6 +228,8 @@ namespace Glamaholic {
                     else
                         continue;
                 }
+                
+                Plugin.LogTroubleshooting($"Slot {slot} wants {wantedItem}");
 
                 data->SelectedItemIndex = (uint) slot;
                 
@@ -254,9 +256,11 @@ namespace Glamaholic {
                     needsRetry |= agent->Data->CurrentItems[(int) slot].ItemId != bestItem.ItemId;
                     needsRetry |= agent->Data->CurrentItems[(int) slot].Source != bestItem.SourceAsItemSource;
                 }
-                
-                if (bestItem.Stain1 == wantedItem.Stain1 && bestItem.Stain2 == wantedItem.Stain2)
+
+                if (bestItem.Stain1 == wantedItem.Stain1 && bestItem.Stain2 == wantedItem.Stain2) {
+                    Plugin.LogTroubleshooting($"Skipping stains for {slot}: already has matching stains {bestItem.Stain1}, {bestItem.Stain2}");
                     continue;
+                }
 
                 uint previousContextSlot = data->ContextMenuItemIndex;
                 data->ContextMenuItemIndex = (uint) slot;
@@ -307,7 +311,7 @@ namespace Glamaholic {
                     agent->Data->ContextMenuItemIndex = previousContextSlot;
                     return null;
                 }
-
+                
                 if (plateItem.ItemId != wantedItem.ItemId) {
                     plateItem = null; // remove from consideration
                 } else if (plateItem.Stain1 == wantedItem.Stain1 &&

@@ -1,4 +1,5 @@
 ﻿using Dalamud.Game;
+using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Component.Exd;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
@@ -38,8 +39,10 @@ namespace Glamaholic {
                         return new CachedStain(row.Name.ExtractText(), itemIds, itemName);
                     }));
 
-        public static int GetNumStainSlots(uint itemId) =>
-            Service.DataManager.GetExcelSheet<Item>(ClientLanguage.English)!.GetRowOrDefault(itemId)?.DyeCount ?? 0;
+        public static int GetNumStainSlots(uint itemId) {
+            var (id, kind) = ItemUtil.GetBaseId(itemId);
+            return Service.DataManager.GetExcelSheet<Item>(ClientLanguage.English)!.GetRowOrDefault(id)?.DyeCount ?? 0;
+        }
 
         public static HashSet<byte> ValuableStains { get; } = [101, 102, 103]; // Pure White, Jet Black, Pastel Pink
     }

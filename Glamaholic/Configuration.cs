@@ -302,5 +302,9 @@ namespace Glamaholic {
                 Stain2 = this.Stain2
             };
         }
+
+        public override string ToString() {
+            return $"SavedGlamourItem(ItemId={ItemId}, Stain1={Stain1}, Stain2={Stain2})";
+        }
     }
 }
