@@ -41,6 +41,7 @@ namespace Glamaholic.Ui {
         };
 
         private PluginUi Ui { get; }
+        private FavoritesTab FavoritesTab { get; }
         private ImmutableList<Item> FilteredItems { get; set; }
 
         private FilterInfo? PlateFilter { get; set; }
@@ -78,6 +79,7 @@ namespace Glamaholic.Ui {
 
         private Guid? _dragGuid = null;
         private Guid? _newPlateTargetFolder = null;
+        private bool _selectPlatesTab;
 
         // Changelog state
         private bool _showChangelog = false;
@@ -86,6 +88,7 @@ namespace Glamaholic.Ui {
 
         internal MainInterface(PluginUi ui) {
             this.Ui = ui;
+            this.FavoritesTab = new FavoritesTab(ui);
         }
 
         internal void Open() {
@@ -214,11 +217,18 @@ namespace Glamaholic.Ui {
                 ImGui.EndMenu();
             }
 
+            if (ImGui.MenuItem("Fitting Room")) {
+                this.Ui.OpenFittingRoom();
+            }
+
             var anyChanged = false;
             if (ImGui.BeginMenu("Settings")) {
                 anyChanged |= ImGui.MenuItem("Show plate editor menu", "", ref this.Ui.Plugin.Config.ShowEditorMenu);
                 anyChanged |= ImGui.MenuItem("Show examine window menu", "", ref this.Ui.Plugin.Config.ShowExamineMenu);
                 anyChanged |= ImGui.MenuItem("Show try on menu", "", ref this.Ui.Plugin.Config.ShowTryOnMenu);
+                anyChanged |= ImGui.MenuItem("Show save glamour in right-click menu", "", ref this.Ui.Plugin.Config.ShowContextMenu);
+                anyChanged |= ImGui.MenuItem("Show add to favorites in item right-click menus", "", ref this.Ui.Plugin.Config.ShowFavoriteMenu);
+                anyChanged |= ImGui.MenuItem("Star favorites in shops, market board and loot", "", ref this.Ui.Plugin.Config.ShowFavoriteStars);
                 ImGui.Separator();
                 anyChanged |= ImGui.MenuItem("Show Ko-fi button", "", ref this.Ui.Plugin.Config.ShowKofiButton);
                 ImGui.Separator();
@@ -1372,9 +1382,15 @@ namespace Glamaholic.Ui {
                     }
                 }
 
+                // nothing to copy, and trimming the trailing newline below would fail
+                copyDyes &= stainItems.Count > 0;
+
                 StringBuilder export = new();
 
                 ImGui.BeginTooltip();
+
+                if (stainItems.Count == 0)
+                    ImGui.TextUnformatted("This plate has no dyes.");
 
                 foreach (var (stain, track) in stainItems.OrderBy(kvp => -kvp.Value.Item1)) {
                     string itemName = track.Item2.ItemName;
@@ -1437,11 +1453,30 @@ namespace Glamaholic.Ui {
 
             this.DrawWarnings();
 
-            this.DrawPlateList();
+            if (!ImGui.BeginTabBar("main tabs")) {
+                return;
+            }
 
-            ImGui.SameLine();
+            // jump back to plates when one is opened from elsewhere (e.g. "Save glamour")
+            var platesFlags = this._selectPlatesTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+            this._selectPlatesTab = false;
 
-            this.DrawPlateDetail();
+            if (ImGui.BeginTabItem("Plates", platesFlags)) {
+                this.DrawPlateList();
+
+                ImGui.SameLine();
+
+                this.DrawPlateDetail();
+
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Favorites")) {
+                this.FavoritesTab.Draw();
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
         }
 
         private void DrawMassImportWindow() {
@@ -1528,6 +1563,7 @@ namespace Glamaholic.Ui {
         internal void SwitchPlate(Guid plateId, bool scrollTo = false) {
             this._selectedPlateId = plateId;
             this._scrollToSelected = scrollTo;
+            this._selectPlatesTab = true;
             this._renameInput = string.Empty;
             this._showRename = false;
             this._deleteConfirm = false;

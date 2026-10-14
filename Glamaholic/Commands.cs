@@ -9,7 +9,7 @@ namespace Glamaholic {
             this.Plugin = plugin;
 
             Service.CommandManager.AddHandler("/glamaholic", new CommandInfo(this.OnCommand) {
-                HelpMessage = $"Toggle visibility of the {Plugin.Name} window",
+                HelpMessage = $"Toggle visibility of the {Plugin.Name} window. Use \"/glamaholic fit\" for the Fitting Room.",
             });
         }
 
@@ -18,7 +18,15 @@ namespace Glamaholic {
         }
 
         private void OnCommand(string command, string arguments) {
-            this.Plugin.Ui.ToggleMainInterface();
+            switch (arguments.Trim().ToLowerInvariant()) {
+                case "fit":
+                case "fittingroom":
+                    this.Plugin.Ui.ToggleFittingRoom();
+                    break;
+                default:
+                    this.Plugin.Ui.ToggleMainInterface();
+                    break;
+            }
         }
     }
 }

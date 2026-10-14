@@ -29,6 +29,7 @@
 
     <ItemGroup>
         <EmbeddedResource Include="help.txt" />
+        <EmbeddedResource Include="item-patches.txt" />
     </ItemGroup>
 
     <ItemGroup>

@@ -22,6 +22,71 @@ window, then hover over "Create glamour plate" to import plates from the game.
 - Open the Examine window a character, click the "Glamaholic" menu, then click
 "Create glamour plate" to create a glamour plate from someone else's outfit.
 
+- Right-click a nearby character and click "Save glamour" to create a glamour
+plate from what they are currently wearing, without needing to examine them.
+
+---
+
+# Favorites
+
+Keep a list of gear you want to collect in the Favorites tab of the main
+Glamaholic window. Favorites are grouped by slot, and items already in your
+Glamour Dresser or Armoire have a green check mark.
+
+- Right-click an item almost anywhere in game (inventory, shops, chat links,
+the market board) and click "Add to Favorites".
+
+- Open the Examine window on another character, right-click one of their
+slots, then click "Add to Favorites" to save the glamour they are showing.
+
+- Type in the search box at the top of the Favorites tab to find any piece of
+gear, then click it to add it to your favorites.
+
+Favorited items are marked with a star in shops, on the market board and in
+the loot roll window, so you can spot them. Both the star and the right-click
+option can be turned off in the Settings menu.
+
+---
+
+# Fitting Room
+
+The Fitting Room lists every piece of glamour in the game, sorted by slot. Open
+it from the "Fitting Room" button at the top of the main Glamaholic window, or
+with /glamaholic fit.
+
+- Type in the search box to find pieces by name. Every word has to match, in
+any order. The number next to each slot shows how many pieces match.
+
+- Click a piece to preview it in the game's Fitting Room window. If Glamourer
+is installed, you can preview pieces on your own character instead, and click
+"Revert" to undo them.
+
+- Switch between a list and a grid of icons, and pick small, medium or large
+icons. Hover a grid icon to see its name.
+
+- Items that only differ by role (for example "Abyssos Helm of Fending" and
+"Abyssos Helm of Healing") or by a colour or gem in brackets (for example
+"Aetherial Electrum Circlet (Turquoise)") are shown as one entry. Click it to
+see all of the variants and preview them one by one. Untick "Group variants"
+to list them separately.
+
+- Open "Filters" to narrow the list by dye channels, expansion, job (including
+your current job), equip level, rarity, whether you own it, gender or race
+locks (including "Wearable by my character"), favorites, or outfit set.
+
+- Above the list, pick a type for the selected slot, such as helmets,
+circlets, eyepatches, skirts or thigh-high boots. Head pieces can also be
+filtered by whether they have a visor or show your hair, and body pieces by
+whether they're a full outfit. Weapons use the game's own categories.
+
+- Click "Recent" above the slot list to see the last 50 pieces you tried on in
+each slot, from anywhere in the game, newest first. Use it to mix and match
+pieces you've already looked at.
+"Hide duplicate looks" shows only one item for each look.
+
+- Right-click a piece to add it to your favorites, copy its name, find items
+that share its model, or show the rest of its outfit set.
+
 ---
 
 # Finding items that share a model

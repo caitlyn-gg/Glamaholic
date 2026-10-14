@@ -6,6 +6,7 @@ using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -16,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using static FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentMiragePrismMiragePlateData;
 using Cabinet = FFXIVClientStructs.FFXIV.Client.Game.UI.Cabinet;
+using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace Glamaholic {
     internal unsafe class GameFunctions : IDisposable {
@@ -192,12 +194,22 @@ namespace Glamaholic {
         }
 
         internal unsafe bool IsInArmoire(uint itemId) {
-            var row = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Cabinet>()!.FirstOrNull(row => row.Item.RowId == itemId);
-            if (row == null) {
+            if (!DataCache.ArmoireRowsByItem.Value.TryGetValue(itemId, out var row)) {
                 return false;
             }
 
-            return this.Armoire->IsItemInCabinet(row.Value.RowId);
+            return this.Armoire->IsItemInCabinet(row);
+        }
+
+        internal unsafe HashSet<uint> GetArmoireItemIds() {
+            var items = new HashSet<uint>();
+            foreach (var (itemId, row) in DataCache.ArmoireRowsByItem.Value) {
+                if (this.Armoire->IsItemInCabinet(row)) {
+                    items.Add(itemId);
+                }
+            }
+
+            return items;
         }
 
         internal unsafe void LoadPlate(SavedPlate plate) {
@@ -557,6 +569,77 @@ namespace Glamaholic {
             }
 
             AgentTryon.TryOn(0, itemId % Util.HqItemOffset, stainId, stainId2);
+        }
+
+        private static readonly (PlateSlot, DrawDataContainer.EquipmentSlot)[] GearSlots = [
+            (PlateSlot.Head, DrawDataContainer.EquipmentSlot.Head),
+            (PlateSlot.Body, DrawDataContainer.EquipmentSlot.Body),
+            (PlateSlot.Hands, DrawDataContainer.EquipmentSlot.Hands),
+            (PlateSlot.Legs, DrawDataContainer.EquipmentSlot.Legs),
+            (PlateSlot.Feet, DrawDataContainer.EquipmentSlot.Feet),
+            (PlateSlot.Ears, DrawDataContainer.EquipmentSlot.Ears),
+            (PlateSlot.Neck, DrawDataContainer.EquipmentSlot.Neck),
+            (PlateSlot.Wrists, DrawDataContainer.EquipmentSlot.Wrists),
+            (PlateSlot.RightRing, DrawDataContainer.EquipmentSlot.RFinger),
+            (PlateSlot.LeftRing, DrawDataContainer.EquipmentSlot.LFinger),
+        ];
+
+        /*
+         * Reads what a character is visibly wearing and matches each model back to an item.
+         * Items that share a model look identical, so the first matching item is used.
+         */
+        internal Dictionary<PlateSlot, SavedGlamourItem> GetCharacterGlamour(Character* character) {
+            var itemsByModel = DataCache.ItemsByModel.Value;
+            var items = new Dictionary<PlateSlot, SavedGlamourItem>();
+            ref var drawData = ref character->DrawData;
+
+            var mainHand = drawData.Weapon(DrawDataContainer.WeaponSlot.MainHand).ModelId;
+            var hasMainHand = itemsByModel.TryGetValue((PlateSlot.MainHand, WeaponModelKey(mainHand)), out var mainHandItem);
+            if (hasMainHand) {
+                items[PlateSlot.MainHand] = new SavedGlamourItem {
+                    ItemId = mainHandItem.RowId,
+                    Stain1 = mainHand.Stain0,
+                    Stain2 = mainHand.Stain1,
+                };
+            }
+
+            // dual-wielded weapons draw their off hand from the main hand item's secondary model
+            var offHand = drawData.Weapon(DrawDataContainer.WeaponSlot.OffHand).ModelId;
+            var offHandKey = WeaponModelKey(offHand);
+            if ((!hasMainHand || offHandKey != mainHandItem.ModelSub)
+                && itemsByModel.TryGetValue((PlateSlot.OffHand, offHandKey), out var offHandItem)) {
+                items[PlateSlot.OffHand] = new SavedGlamourItem {
+                    ItemId = offHandItem.RowId,
+                    Stain1 = offHand.Stain0,
+                    Stain2 = offHand.Stain1,
+                };
+            }
+
+            foreach (var (slot, equipmentSlot) in GearSlots) {
+                var model = drawData.Equipment(equipmentSlot);
+                if (model.Id == 0) {
+                    continue;
+                }
+
+                var lookupSlot = slot == PlateSlot.LeftRing ? PlateSlot.RightRing : slot;
+                var key = model.Id | ((ulong) model.Variant << 16);
+                if (!itemsByModel.TryGetValue((lookupSlot, key), out var item)) {
+                    Plugin.LogTroubleshooting($"No item found for {slot} model {model.Id}-{model.Variant}");
+                    continue;
+                }
+
+                items[slot] = new SavedGlamourItem {
+                    ItemId = item.RowId,
+                    Stain1 = model.Stain0,
+                    Stain2 = model.Stain1,
+                };
+            }
+
+            return items;
+        }
+
+        private static ulong WeaponModelKey(WeaponModelId model) {
+            return model.Id | ((ulong) model.Type << 16) | ((ulong) model.Variant << 32);
         }
 
         internal struct PrismBoxCachedItem {

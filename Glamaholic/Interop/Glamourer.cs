@@ -39,6 +39,17 @@ namespace Glamaholic.Interop {
             } catch (Exception) { }
         }
 
+        public static void SetItem(int playerIndex, PlateSlot slot, uint itemId, byte stain1 = 0, byte stain2 = 0) {
+            if (!IsAvailable())
+                return;
+
+            try {
+                Service.Framework.Run(() => {
+                    _SetItem.Invoke(playerIndex, ConvertSlot(slot), itemId, [stain1, stain2]);
+                });
+            } catch (Exception) { }
+        }
+
         public static void RevertState(int playerIndex) {
             if (!IsAvailable()) return;
 

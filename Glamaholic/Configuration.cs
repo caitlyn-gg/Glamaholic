@@ -93,9 +93,19 @@ namespace Glamaholic {
 
         [JsonConverter(typeof(TreeNodeListConverter))]
         public List<TreeNode> Plates { get; init; } = new();
+        public List<uint> FavoriteItems { get; init; } = new();
+        public FittingRoomFilters FittingRoomFilters { get; init; } = new();
+        public Dictionary<PlateSlot, List<uint>> TryOnHistory { get; init; } = new();
         public bool ShowEditorMenu = true;
         public bool ShowExamineMenu = true;
         public bool ShowTryOnMenu = true;
+        public bool ShowContextMenu = true;
+        public bool ShowFavoriteMenu = true;
+        public bool ShowFavoriteStars = true;
+        public bool FittingRoomPreviewOnCharacter = false;
+        public FittingRoomView FittingRoomView = FittingRoomView.List;
+        public IconSize FittingRoomIconSize = IconSize.Small;
+        public bool FittingRoomGroupVariants = true;
         public bool ShowKofiButton = true;
         public bool ItemFilterShowObtainedOnly;
         public bool TroubleshootingMode = false;

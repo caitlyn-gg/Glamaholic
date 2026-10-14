@@ -209,7 +209,7 @@ namespace Glamaholic.Ui.Helpers {
             return ret;
         }
 
-        private static void CopyToGlamourPlate(PluginUi ui, string name, Dictionary<PlateSlot, SavedGlamourItem> items, Guid? plateId, Guid? targetFolderId = null) {
+        internal static void CopyToGlamourPlate(PluginUi ui, string name, Dictionary<PlateSlot, SavedGlamourItem> items, Guid? plateId, Guid? targetFolderId = null) {
             var plate = new SavedPlate(name) {
                 Items = items,
             };

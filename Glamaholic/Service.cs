@@ -30,5 +30,7 @@ namespace Glamaholic {
         [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
 
         [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
+
+        [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     }
 }

@@ -11,6 +11,7 @@ namespace Glamaholic {
         internal Plugin Plugin { get; }
 
         private MainInterface MainInterface { get; }
+        private FittingRoom FittingRoom { get; }
         private EditorHelper EditorHelper { get; }
         private ExamineHelper ExamineHelper { get; }
         public TryOnHelper TryOnHelper { get; }
@@ -34,6 +35,7 @@ namespace Glamaholic {
             }
 
             this.MainInterface = new MainInterface(this);
+            this.FittingRoom = new FittingRoom(this);
             this.EditorHelper = new EditorHelper(this);
             this.ExamineHelper = new ExamineHelper(this);
             this.TryOnHelper = new TryOnHelper(this);
@@ -57,6 +59,14 @@ namespace Glamaholic {
             this.MainInterface.Toggle();
         }
 
+        internal void OpenFittingRoom() {
+            this.FittingRoom.Open();
+        }
+
+        internal void ToggleFittingRoom() {
+            this.FittingRoom.Toggle();
+        }
+
         internal IDalamudTextureWrap? GetIcon(ushort id) {
             var icon = Service.TextureProvider.GetFromGameIcon(new Dalamud.Interface.Textures.GameIconLookup(id)).GetWrapOrDefault();
             return icon;
@@ -64,6 +74,7 @@ namespace Glamaholic {
 
         private void Draw() {
             this.MainInterface.Draw();
+            this.FittingRoom.Draw();
             this.EditorHelper.Draw();
             this.ExamineHelper.Draw();
             this.TryOnHelper.Draw();
