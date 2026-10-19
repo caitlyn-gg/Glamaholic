@@ -18,6 +18,9 @@ namespace Glamaholic {
         public Plugin(IDalamudPluginInterface pluginInterface) {
             pluginInterface.Create<Service>();
 
+            pluginInterface.UiBuilder.DisableCutsceneUiHide = true;
+            pluginInterface.UiBuilder.DisableGposeUiHide = true;
+
             this.Config = Configuration.LoadAndMigrate(Service.Interface!.ConfigFile);
 
             this.Functions = new GameFunctions(this);
